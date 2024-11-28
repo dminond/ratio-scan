@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Food Barcode Search</title>
+    <title>Barcode Search</title>
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
@@ -38,6 +38,13 @@
         gap: 1rem;
       }
 
+      .balance-form {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        padding-top: 1rem;
+      }
+
       input[type="text"] {
         padding: 12px;
         font-size: 16px;
@@ -49,6 +56,56 @@
       input[type="text"]:focus {
         outline: none;
         border-color: #099905;
+      }
+
+      input[type="number"] {
+        padding: 12px;
+        font-size: 16px;
+        border: 2px solid #ddd;
+        border-radius: 6px;
+        transition: border-color 0.3s ease;
+      }
+
+      input[type="number"]:focus {
+        outline: none;
+        border-color: #099905;
+      }
+
+      select {
+        padding: 12px; /* Same padding as input */
+        width: auto;
+        font-size: 16px; /* Same font size as input */
+        border: 2px solid #ddd; /* Same border as input */
+        border-radius: 6px; /* Same border-radius as input */
+        transition: border-color 0.3s ease; /* Smooth transition for border color */
+        appearance: none; /* Remove native styling in some browsers for a consistent look */
+        background-color: #fff; /* Optional: Set a background color */
+        cursor: pointer; /* Change cursor to pointer to match interaction expectations */
+      }
+
+      select:focus {
+        outline: none; /* Remove the default browser outline */
+        border-color: #099905; /* Highlight color when focused, matching input */
+      }
+
+      #ratioInput {
+        width: 5ch; /* Enough to fit approximately 5 digits and padding */
+        padding: 0.2em; /* Add some padding for better appearance */
+        font-size: 1rem; /* Adjust font size as needed */
+        text-align: right;
+        border: 1px solid #ccc; /* Optional: Add a border */
+        border-radius: 4px; /* Optional: Rounded corners */
+        box-sizing: border-box; /* Ensures padding and borders are included in width */
+      }
+
+      #gramsInput {
+        width: 6ch;
+        padding: 0.2em; /* Add some padding for better appearance */
+        font-size: 1rem; /* Adjust font size as needed */
+        text-align: center; /* Align text to the right for numerical inputs */
+        border: 1px solid #ccc; /* Optional: Add a border */
+        border-radius: 4px; /* Optional: Rounded corners */
+        box-sizing: border-box; /* Ensures padding and borders are included in width */
       }
 
       button {
@@ -139,6 +196,26 @@
       #captureCanvas {
         display: none !important;
       }
+
+      .hidden {
+        display: none;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.5s ease-in-out;
+      }
+
+      .visible {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .close-link {
+        color: #ff6666; /* Light red color */
+        text-decoration: none; /* Remove underline */
+        font-weight: bold;
+        cursor: pointer;
+        float: right; /* Align to the right */
+      }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2/dist/quagga.min.js"></script>
   </head>
@@ -164,6 +241,10 @@
           <p>
             You can also manually enter the barcode number in the search box
             below.
+          </p>
+          <p>
+            After you get the results, you can click 'Balance this' to see how
+            much fat is needed to bring it in ratio.
           </p>
         </div>
       </details>
@@ -216,9 +297,25 @@
         />
         <button type="submit">Search</button>
       </form>
+
+      <form class="balance-form" onsubmit="startBalance(event)">
+        <button class="hidden" id="balanceButton">Balance this 🧈</button>
+        <div id="balanceArea"></div>
+      </form>
+
       <div id="result"></div>
     </div>
     <script>
+      let ingredientData = {};
+      // fatOptions is used to populate fat balance dropdown menu and value is grams of
+      const fatOptions = [
+        { name: "Butter", fat: 0.815, pc: 0 },
+        { name: "Oil (any)", fat: 1, pc: 0 },
+        { name: "Mayo", fat: 0.769, pc: 0 },
+        { name: "Heavy Cream", fat: 0.356, pc: 0.0582 },
+        { name: "Country Crock Plant Cream", fat: 0.3, pc: 0 },
+      ];
+
       async function searchBarcode(event) {
         event.preventDefault();
         const barcode = document.getElementById("barcode").value;
@@ -250,7 +347,7 @@
 
           const data = await response.json();
           const foodData = JSON.parse(data.body).foods[0];
-
+          console.log(foodData);
           const totalFat = foodData.foodNutrients.find(
             (n) => n.nutrientName === "Total lipid (fat)"
           ).value;
@@ -261,7 +358,17 @@
             (n) => n.nutrientName === "Carbohydrate, by difference"
           ).value;
           const ketoRatio = totalFat / (protein + carbs);
+          const protCarbPerGram = (protein + carbs) / 100;
+          //console.log(protCarbPerGram);
 
+          // Save ingredient data to ingredientData for use in balancing
+          ingredientData = {
+            name: foodData.description,
+            fat: totalFat,
+            protCarb: protCarbPerGram,
+            ingredientRatio: ketoRatio,
+          };
+          closeBalanceDiv();
           resultDiv.innerHTML = `
             <div style="background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <div style="text-align: center; margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 8px;">
@@ -277,7 +384,7 @@
                 <h2 style="color: #333; margin-bottom: 15px;">${
                   foodData.description
                 }</h2>
-                
+
                 <div style="margin-bottom: 20px;">
                     <p><strong>Brand:</strong> ${foodData.brandName} (${
             foodData.brandOwner
@@ -330,6 +437,7 @@
                 </div>
             </div>
         `;
+          showBalanceButton();
         } catch (error) {
           console.error("Error:", error);
           resultDiv.innerHTML = "Error searching barcode. Please try again.";
@@ -598,6 +706,143 @@
         const isIOS = /iPad|iPhone|iPod/.test(ua);
         const isSafari = /^((?!chrome|android).)*safari/i.test(ua);
         return isIOS && isSafari;
+      }
+
+      // Show the balance button
+      function showBalanceButton() {
+        const button = document.getElementById("balanceButton");
+        button.classList.remove("hidden");
+      }
+
+      // Start the food balancing flow
+      function startBalance(event) {
+        event.preventDefault();
+
+        const balanceDiv = document.getElementById("balanceArea");
+        balanceDiv.classList.add("visible");
+        balanceDiv.classList.remove("hidden");
+        balanceDiv.innerHTML = `
+            <div style="background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <div style="text-align: center; margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 8px;">
+                    <h3 style="color: #333; margin-bottom: 10px;">To balance:</h3>
+                    <input
+                        id="gramsInput"
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        placeholder="10.0"
+                        pattern="^\\d{1,4}(\\.\\d{1,2})?$"
+                        onfocus="selectText(this)"
+                    />
+                    <h3 style="color: #333; margin-bottom: 10px;">grams of</h3>
+                    <h3 style="color: #000; margin-bottom: 10px;">${ingredientData.name}</h3>
+                    <h3 style="color: #333; margin-bottom: 10px;">with</h3>
+                    <select id="fatDropdown">
+                      <option value="" disabled selected>-- Select a fat --</option>
+                    </select>
+                    <h3 style="color: #333; margin-bottom: 10px;">at a</h3>
+                    <input
+                        id="ratioInput"
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        onfocus="selectText(this)"
+                      /> :1 ratio
+                    <hr>
+                    <button type="button" id="calculateButton" class="scan-button">Calculate</button>
+                    <div style="font-size: 24px; font-weight: bold; color: #2c3e50;" class="hidden" id="balanceResults">
+                        
+                    </div>
+                    <a class="close-link" onclick="closeBalanceDiv()">Close</a>
+                </div>
+            </div>`;
+
+        // dynamically load fat options
+        const fatDropdown = document.getElementById("fatDropdown");
+        fatOptions.forEach((option) => {
+          const newOption = document.createElement("option");
+          newOption.textContent = option.name;
+          newOption.value = JSON.stringify(option);
+          fatDropdown.appendChild(newOption);
+        });
+
+        // handle 'calculate' button click with calculateBalance() function
+        document
+          .getElementById("calculateButton")
+          .addEventListener("click", calculateBalance);
+
+        // smoothly scroll into view after load
+        balanceDiv.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+
+      function calculateBalance() {
+        const grams =
+          parseFloat(document.getElementById("gramsInput").value) || 0;
+        const fatDropdown = document.getElementById("fatDropdown").value;
+        try {
+          fatData = JSON.parse(fatDropdown); // Safely parse the JSON
+        } catch (error) {
+          alert("Please choose a fat to use.");
+          fatDropdown.focus();
+          return;
+        }
+
+        const ratio =
+          parseFloat(document.getElementById("ratioInput").value) || 0;
+
+        // validation checks
+        if (!grams) {
+          alert("Please enter the grams of the ingredient.");
+          gramsInput.focus();
+          return;
+        }
+
+        if (!ratio) {
+          alert("Please enter a value for ratio.");
+          ratioInput.focus();
+          return;
+        }
+
+        // calculate grams of fat to balance selected grams of ingredient
+        // if food is already at or above the requested ratio, say so. otherwise calculate
+        // fat required = (PC from ingredient)*grams*ratio / fat selection fat content
+        if (ingredientData.ingredientRatio >= ratio) {
+          document.getElementById("balanceResults").innerHTML = `
+        The scanned ingredient (${ingredientData.name}) is already at a ratio of
+        ${ingredientData.ingredientRatio.toFixed(2)}!
+        
+        `;
+        } else {
+          const fatGramsRequired = ingredientData.protCarb * grams * ratio;
+          console.log(fatGramsRequired);
+          const fatSelectionGramsReq = fatGramsRequired / fatData.fat;
+          console.log(fatSelectionGramsReq);
+
+          document.getElementById("balanceResults").innerHTML = `
+        Use <span style="color: green">${fatSelectionGramsReq.toFixed(
+          2
+        )} grams of ${fatData.name}</span> to bring ${grams}g of 
+        ${ingredientData.name} to a ${ratio.toFixed(2)}:1 ratio. 
+        
+        <p>Happy keto-ing!🥑😊</p>
+        `;
+        }
+        document.getElementById("balanceResults").classList.remove("hidden");
+      }
+
+      // Function to apply the 'hidden' class to the balance div
+      function closeBalanceDiv() {
+        const div = document.getElementById("balanceArea");
+        div.classList.add("hidden");
+        window.scrollTo({
+          top: 0,
+          behavior: "smooth", // Enables smooth scrolling
+        });
+      }
+
+      // function to select all text in an input field
+      function selectText(input) {
+        input.select();
       }
     </script>
   </body>

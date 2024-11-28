@@ -1,0 +1,5 @@
+Start python server:
+python -m http.server 8000
+
+Serve over HTTPS:
+local-ssl-proxy --source 8443 --target 8000
