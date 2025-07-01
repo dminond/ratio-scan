@@ -217,6 +217,67 @@
         float: right; /* Align to the right */
       }
     </style>
+    <style id="dark-theme">
+      :root {
+        --bg-dark: #121212;
+        --bg-card: #1e1e1e;
+        --text-primary: #e0e0e0;
+        --accent: #099904;
+      }
+
+      body {
+        background-color: var(--bg-dark);
+        color: var(--text-primary);
+      }
+
+      .search-container {
+        background-color: var(--bg-card);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+      }
+
+      h1 {
+        color: var(--text-primary);
+      }
+
+      input[type="text"],
+      input[type="number"],
+      select {
+        background-color: #333;
+        border-color: #555;
+        color: var(--text-primary);
+      }
+
+      input[type="text"]:focus,
+      input[type="number"]:focus,
+      select:focus {
+        border-color: var(--accent);
+      }
+
+      /* About section overrides */
+      .about-section {
+        color: #aaa !important;
+      }
+      .about-section summary:hover {
+        color: var(--text-primary) !important;
+      }
+      .about-content {
+        background: #2a2a2a !important;
+        color: var(--text-primary) !important;
+      }
+
+      /* Result card overrides */
+      #result div {
+        background-color: var(--bg-card) !important;
+        color: var(--text-primary) !important;
+      }
+      #result h2,
+      #result h3,
+      #result p,
+      #result li,
+      #result strong {
+        color: var(--text-primary) !important;
+      }
+    </style>
     <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2/dist/quagga.min.js"></script>
   </head>
   <body>
