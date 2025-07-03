@@ -279,6 +279,7 @@
       }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2/dist/quagga.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   </head>
   <body>
     <div class="search-container">
@@ -366,6 +367,9 @@
 
       <div id="result"></div>
     </div>
+    <button id="confettiButton" style="width:100%; padding:12px 24px; background-color:#ff9800; color:#fff; border:none; border-radius:6px; font-size:16px; margin:20px 0; cursor:pointer;">
+      Celebrate 🎉
+    </button>
     <script>
       let ingredientData = {};
       // fatOptions is used to populate fat balance dropdown menu and value is grams of
@@ -904,6 +908,18 @@
       // function to select all text in an input field
       function selectText(input) {
         input.select();
+      }
+
+      // Confetti button event handler
+      const confettiBtn = document.getElementById("confettiButton");
+      if (confettiBtn) {
+        confettiBtn.addEventListener("click", () => {
+          confetti({
+            particleCount: 150,
+            spread: 70,
+            origin: { y: 0.6 },
+          });
+        });
       }
     </script>
   </body>
